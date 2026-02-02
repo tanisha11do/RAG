@@ -10,6 +10,9 @@ from langchain_classic.chains import RetrievalQA
 from langchain_classic.embeddings import HuggingFaceEmbeddings
 from langchain_classic.llms import HuggingFacePipeline
 from transformers import pipeline
+from langchain_community.document_loaders import WikipediaLoader
+from langchain_classic.schema import Document
+
 #from langchain_openai import OpenAI
 
 # Load OpenAI API key from .env
@@ -17,6 +20,22 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # --------- Functions ---------
+
+def load_wikipedia(query, max_docs=2):
+    loader = WikipediaLoader(
+        query=query,
+        load_max_docs=max_docs
+    )
+
+    docs = loader.load()  # List[Document]
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50
+    )
+
+    return splitter.split_documents(docs)
+
 
 def load_pdfs(files):
     """
@@ -39,7 +58,7 @@ def load_pdfs(files):
     return docs_split
 
 
-def create_vector_store(text_chunks):
+def create_vector_store(pdf_chunks=None, wiki_docs=None):
     """
     Convert text chunks to embeddings and store in FAISS vectorstore.
     """
@@ -47,7 +66,18 @@ def create_vector_store(text_chunks):
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
-    vector_store = FAISS.from_texts(text_chunks, embeddings)
+
+    texts=[]
+
+    if pdf_chunks:
+        texts.extend(pdf_chunks)
+
+    if wiki_docs:
+        texts.extend([doc.page_content for doc in wiki_docs])
+
+    if not texts:
+        raise ValueError("No documents provided for vector store")
+    vector_store = FAISS.from_texts(texts, embeddings)
     return vector_store
 
 '''

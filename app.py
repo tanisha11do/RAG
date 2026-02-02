@@ -1,5 +1,5 @@
 import streamlit as st
-from rag import load_pdfs, create_vector_store, get_answer
+from rag import load_pdfs, create_vector_store, get_answer, load_wikipedia
 
 # For Wikipedia
 import wikipedia
@@ -18,14 +18,14 @@ if options == "Wikipedia":
     if query:
         try:
             # Search Wikipedia for the query
-            search_results = wikipedia.search(query)
+            search_results = load_wikipedia.search(query)
 
             if not search_results:
                 st.write("No Wikipedia results found.")
             else:
                 # Get the first result's summary
-                summary = wikipedia.summary(search_results[0], sentences=5)
-                st.write("**Wikipedia Summary:**")
+                summary = load_wikipedia.summary(search_results[0], sentences=5)
+                st.write("**Answer:**")
                 st.write(summary)
 
         except Exception as e:
