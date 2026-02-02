@@ -1,56 +1,38 @@
 import streamlit as st
 from rag import load_pdfs, create_vector_store, get_answer, load_wikipedia
 
-# For Wikipedia
-import wikipedia
-
 st.set_page_config(page_title="TeaRAG App")
-
 st.title("RAG Model Benefit Demonstration")
 
 # User selects the source
-options = st.selectbox("Select Query Option:", ("Wikipedia", "Research Paper"))
+source = st.selectbox("Select Knowledge Source:", ("PDFs", "Wikipedia", "PDFs + Wikipedia"))
 
-# ----------------- Wikipedia Option -----------------
-if options == "Wikipedia":
-    query = st.text_input("Enter your Wikipedia query:")
-
-    if query:
-        try:
-            # Search Wikipedia for the query
-            search_results = load_wikipedia.search(query)
-
-            if not search_results:
-                st.write("No Wikipedia results found.")
-            else:
-                # Get the first result's summary
-                summary = load_wikipedia.summary(search_results[0], sentences=5)
-                st.write("**Answer:**")
-                st.write(summary)
-
-        except Exception as e:
-            st.write("Error fetching Wikipedia data:", e)
-
-# ----------------- Research Paper Option -----------------
-elif options == "Research Paper":
-    st.write("Upload PDFs and ask questions!")
-
+# Upload PDFs only if PDFs option is selected
+uploaded_files = None
+if source in ("PDFs", "PDFs + Wikipedia"):
     uploaded_files = st.file_uploader(
         "Upload your PDF documents", type="pdf", accept_multiple_files=True
     )
 
+# User query
+query = st.text_input("Enter your question:")
+
+if query:
+    pdf_chunks = None
+    wiki_docs = None
+
+    # Load PDFs if uploaded
     if uploaded_files:
-        # Load and split PDFs
-        docs_split = load_pdfs(uploaded_files)
-        st.success(f"{len(docs_split)} text chunks created!")
+        pdf_chunks = load_pdfs(uploaded_files)
 
-        # Create vector store
-        vector_store = create_vector_store(docs_split)
-        st.success("Vector store created!")
+    # Load Wikipedia docs if chosen
+    if source in ("Wikipedia", "PDFs + Wikipedia"):
+        wiki_docs = load_wikipedia(query)
 
-        # Query input
-        query = st.text_input("Ask a question about your documents:")
+    # Create vector store from PDFs + Wikipedia
+    vector_store = create_vector_store(pdf_chunks, wiki_docs)
 
-        if query:
-            answer = get_answer(vector_store, query)
-            st.write("**Answer:**", answer)
+    # Get answer
+    answer = get_answer(vector_store, query)
+
+    st.write("**Answer:**", answer)
